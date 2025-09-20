@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="%BASE_URL%vite.svg" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="轻量化企业内部项目管理工具，提供项目统计、任务管理、进度跟踪等功能" />
   <meta name="keywords" content="项目管理,任务管理,进度跟踪,企业工具" />
@@ -24,11 +24,13 @@
   
   <!-- PWA 支持 -->
   <meta name="theme-color" content="#409EFF" />
-<!-- iOS 支持 -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- iOS 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="项目管理工具" />
-  <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
   <!-- 预加载关键资源 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -141,21 +143,78 @@
   </noscript>
   
   <!-- 主应用脚本 -->
+  <script type="module" src="/src/main.js"></script>
   
-
-
-  <!-- Service Worker registration (disabled)
+  <!-- 应用加载完成后的处理 -->
   <script>
+    // 应用加载完成后隐藏加载动画
+    window.addEventListener('load', () => {
+      const loading = document.getElementById('loading');
+      const app = document.getElementById('app');
+      
+      // 延迟一点时间以确保应用完全渲染
+      setTimeout(() => {
+        if (loading) {
+          loading.classList.add('fade-out');
+          setTimeout(() => {
+            loading.remove();
+          }, 300);
+        }
+        
+        if (app) {
+          app.classList.add('loaded');
+        }
+      }, 500);
+    });
+    
+    // 错误处理
+    window.addEventListener('error', (event) => {
+      console.error('Application error:', event.error);
+      
+      // 在生产环境中可以发送错误报告
+      if (window.location.hostname !== 'localhost') {
+        // 发送错误报告到监控服务
+        // errorReportingService.report(event.error);
+      }
+    });
+    
+    // 性能监控
+    if ('performance' in window) {
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const perfData = performance.getEntriesByType('navigation')[0];
+          console.log('Page load time:', perfData.loadEventEnd - perfData.fetchStart, 'ms');
+          
+          // 在生产环境中可以发送性能数据
+          if (window.location.hostname !== 'localhost') {
+            // performanceService.report(perfData);
+          }
+        }, 0);
+      });
+    }
+    
+    // PWA 安装提示
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // 可以在这里显示自定义的安装提示
+      console.log('PWA install prompt available');
+    });
+    
+    // 服务工作者注册 (PWA 支持)
     if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
-      const base = (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.BASE_URL)
-        ? import.meta.env.BASE_URL
-        : '/';
-      navigator.serviceWorker
-        .register(`${base}sw.js`, { scope: base })
-        .then(reg => console.log('SW registered:', reg))
-        .catch(err => console.log('SW registration failed:', err));
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
     }
   </script>
-  -->
 </body>
 </html>
