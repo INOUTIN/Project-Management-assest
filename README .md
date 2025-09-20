@@ -156,6 +156,6 @@ MIT
 ---
 
 ## 📞 联系方式
-- 维护者：<Your Name>  
-- 邮箱：<your.email@example.com>  
+- 维护者：<Lou Yu>  
+- 邮箱：<250477007@qq.com>  
 - 项目地址：<https://github.com/your-username/project-management-tool>
