@@ -143,5 +143,19 @@
   <!-- 主应用脚本 -->
   
 
+
+  <!-- Service Worker registration (disabled)
+  <script>
+    if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+      const base = (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.BASE_URL)
+        ? import.meta.env.BASE_URL
+        : '/';
+      navigator.serviceWorker
+        .register(`${base}sw.js`, { scope: base })
+        .then(reg => console.log('SW registered:', reg))
+        .catch(err => console.log('SW registration failed:', err));
+    }
+  </script>
+  -->
 </body>
 </html>
