@@ -56,14 +56,14 @@ class RouteRegistry {
     this.routes = [...baseRoutes]
     this.dynamicRoutes = []
   }
-  
+
   // 注册功能模块路由
   registerFeatureRoutes(featureName, routes) {
     if (!FeatureChecker.isEnabled(featureName)) {
       console.warn(`Feature ${featureName} is disabled, skipping route registration`)
       return
     }
-    
+
     const processedRoutes = routes.map(route => ({
       ...route,
       meta: {
@@ -71,11 +71,11 @@ class RouteRegistry {
         feature: featureName
       }
     }))
-    
+
     this.dynamicRoutes.push(...processedRoutes)
     this.routes.push(...processedRoutes)
   }
-  
+
   // 获取所有路由
   getAllRoutes() {
     return this.routes.filter(route => {
@@ -93,7 +93,7 @@ export const routeRegistry = new RouteRegistry()
 // 设置路由
 export function setupRouter(app, store) {
   const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHistory(import.meta.env.BASE_URL),
     routes: routeRegistry.getAllRoutes(),
     scrollBehavior(to, from, savedPosition) {
       if (savedPosition) {
@@ -103,15 +103,15 @@ export function setupRouter(app, store) {
       }
     }
   })
-  
+
   // 设置路由守卫
   setupRouterGuards(router, store)
-  
+
   // 注册到应用
   app.use(router)
-  
+
   // 提供路由注册器
   app.provide('$routeRegistry', routeRegistry)
-  
+
   return router
 }
