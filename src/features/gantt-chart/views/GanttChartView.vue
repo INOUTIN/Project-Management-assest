@@ -26,6 +26,15 @@
         <el-button type="primary" :icon="Plus" @click="addTask">
           添加任务
         </el-button>
+        <!-- Phase 1 紧急修复：数据清理功能 -->
+        <el-button 
+          type="warning" 
+          :icon="Tools" 
+          @click="cleanDuplicateTasks"
+          title="清理重复任务"
+        >
+          清理重复
+        </el-button>
       </div>
     </div>
 
@@ -248,7 +257,7 @@
             </el-table-column>
 
             <!-- 操作列 -->
-            <el-table-column label="操作" width="120" fixed="right">
+            <el-table-column label="操作" width="150" fixed="right">
               <template #default="scope">
                 <div class="action-buttons">
                   <el-button 
@@ -272,6 +281,7 @@
                     type="danger"
                     @click.stop="deleteTask(scope.row)"
                     title="删除任务"
+                    class="delete-btn"
                   />
                 </div>
               </template>
@@ -729,11 +739,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowLeft, Edit, Plus, List, Check, Clock, Warning, 
-  Delete, View, Close, Flag, ArrowRight
+  Delete, View, Close, Flag, ArrowRight, Tools
 } from '@element-plus/icons-vue'
 
 // 数据服务
 import { getGlobalProjectDataCenter } from '../composables/useProjectDataCenter.js'
+import { TaskDataService } from '@shared/services/data/TaskDataService.js'
 import { DateUtils } from '@shared/utils/date.js'
 import GanttTimeline from '../components/GanttTimeline.vue'
 import ViewSwitcher from '../components/ViewSwitcher.vue'
@@ -743,6 +754,9 @@ const router = useRouter()
 
 // 使用全局数据中心
 const dataCenter = getGlobalProjectDataCenter()
+
+// 创建TaskDataService实例
+const taskDataService = new TaskDataService()
 
 // 解构数据中心的状态和方法
 const {
@@ -836,6 +850,32 @@ const handleScrollToToday = () => {
   console.log('Scroll to today')
 }
 
+// 任务去重函数 - Phase 1 紧急修复
+const deduplicateTasks = (tasks) => {
+  if (!tasks || tasks.length === 0) return []
+  
+  const uniqueTasks = []
+  const seenTasks = new Set()
+  
+  for (const task of tasks) {
+    // 使用任务名称、开始时间、结束时间作为唯一标识
+    const taskKey = `${task.name}_${task.startDate}_${task.endDate}_${task.assignee || ''}`
+    
+    if (!seenTasks.has(taskKey)) {
+      seenTasks.add(taskKey)
+      uniqueTasks.push(task)
+    } else {
+      console.warn('发现重复任务，已去除:', task.name, 'ID:', task.id)
+    }
+  }
+  
+  if (uniqueTasks.length < tasks.length) {
+    console.log(`任务去重完成: ${tasks.length} → ${uniqueTasks.length}`)
+  }
+  
+  return uniqueTasks
+}
+
 // 方法
 const loadProject = async () => {
   if (!projectId.value) return
@@ -852,8 +892,14 @@ const loadProject = async () => {
       return
     }
     
-    project.value = loadedProject
-    console.log('甘特图页面：已从数据中心加载项目', project.value.name)
+    // 修复：添加任务去重逻辑，防止重复任务显示
+    const deduplicatedProject = {
+      ...loadedProject,
+      tasks: deduplicateTasks(loadedProject.tasks || [])
+    }
+    
+    project.value = deduplicatedProject
+    console.log('甘特图页面：已从数据中心加载项目', project.value.name, '任务数量:', project.value.tasks.length)
     
   } catch (error) {
     console.error('Failed to load project:', error)
@@ -863,6 +909,47 @@ const loadProject = async () => {
 
 const goBack = () => {
   router.go(-1)
+}
+
+// Phase 1 紧急修复：手动清理重复任务功能
+const cleanDuplicateTasks = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '此操作将清理当前项目中的重复任务，是否继续？',
+      '清理重复任务',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    if (!project.value || !project.value.tasks) {
+      ElMessage.info('当前项目没有任务需要清理')
+      return
+    }
+    
+    const originalCount = project.value.tasks.length
+    const cleanedTasks = deduplicateTasks(project.value.tasks)
+    
+    if (cleanedTasks.length < originalCount) {
+      // 更新项目数据
+      project.value.tasks = cleanedTasks
+      
+      // 保存到数据中心
+      await updateProject(projectId.value, project.value)
+      
+      ElMessage.success(`清理完成！已移除 ${originalCount - cleanedTasks.length} 个重复任务`)
+    } else {
+      ElMessage.info('未发现重复任务')
+    }
+    
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('清理重复任务失败:', error)
+      ElMessage.error('清理失败，请稍后重试')
+    }
+  }
 }
 
 const editProject = () => {
@@ -924,7 +1011,7 @@ const editTask = (task) => {
 const deleteTask = async (task) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除任务"${task.name}"吗？`,
+      `确定要删除任务"${task.name}"吗？此操作不可撤销。`,
       '确认删除',
       {
         confirmButtonText: '确定',
@@ -933,19 +1020,26 @@ const deleteTask = async (task) => {
       }
     )
 
-    // 从项目中移除任务
+    // 1. 从TaskDataService中删除任务
+    await taskDataService.delete(task.id)
+    
+    // 2. 从项目的tasks数组中移除任务
     const taskIndex = project.value.tasks.findIndex(t => t.id === task.id)
     if (taskIndex > -1) {
       project.value.tasks.splice(taskIndex, 1)
-      
-      // 使用数据中心更新项目
-      await updateProject(projectId.value, project.value)
-      ElMessage.success('任务删除成功')
     }
+    
+    // 3. 使用数据中心更新项目（确保数据同步）
+    await updateProject(projectId.value, project.value)
+    
+    // 4. 刷新任务列表以确保UI同步
+    await loadTasks()
+    
+    ElMessage.success('任务删除成功')
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Failed to delete task:', error)
-      ElMessage.error('删除任务失败')
+      ElMessage.error('删除任务失败: ' + (error.message || '未知错误'))
     }
   }
 }
@@ -1583,6 +1677,17 @@ watch(() => route.params.id, () => {
 .action-buttons {
   display: flex;
   gap: 4px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.delete-btn {
+  color: #f56c6c !important;
+}
+
+.delete-btn:hover {
+  background-color: #fef0f0 !important;
+  color: #f56c6c !important;
 }
 
 .empty-state {

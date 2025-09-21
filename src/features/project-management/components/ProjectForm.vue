@@ -345,9 +345,20 @@ const handleSubmit = async () => {
       ...formData.value,
       tasks: formData.value.tasks.map(task => {
         const { tempId, ...taskData } = task
+        
+        // 修复：严格保持现有任务的ID，只为新任务生成ID
+        let taskId = task.id
+        if (!taskId && tempId) {
+          // 只有当任务没有真实ID且有tempId时，才是新任务，需要生成ID
+          taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          console.log('生成新任务ID:', taskId, '任务名称:', task.name)
+        } else if (taskId) {
+          console.log('保持现有任务ID:', taskId, '任务名称:', task.name)
+        }
+        
         return {
           ...taskData,
-          id: task.id || `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          id: taskId
         }
       })
     }

@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import { FeatureChecker } from '@core/config/feature.config'
 import { setupRouterGuards } from './guards'
 
@@ -93,7 +93,7 @@ export const routeRegistry = new RouteRegistry()
 // 设置路由
 export function setupRouter(app, store) {
   const router = createRouter({
-    history: createWebHistory(import.meta.env.BASE_URL),
+    history: createWebHashHistory(),
     routes: routeRegistry.getAllRoutes(),
     scrollBehavior(to, from, savedPosition) {
       if (savedPosition) {

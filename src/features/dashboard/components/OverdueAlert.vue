@@ -59,6 +59,15 @@
       <el-button 
         v-if="tasks.length > 0"
         size="small" 
+        :icon="FullScreen"
+        @click.stop="handleFullscreen"
+        title="全屏查看"
+      >
+        全屏
+      </el-button>
+      <el-button 
+        v-if="tasks.length > 0"
+        size="small" 
         @click.stop="handleQuickAction"
       >
         {{ quickActionText }}
@@ -73,7 +82,8 @@ import {
   Warning, 
   Clock, 
   CircleCheck,
-  Bell
+  Bell,
+  FullScreen
 } from '@element-plus/icons-vue'
 import { DateUtils } from '@shared/utils/date.js'
 
@@ -97,7 +107,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['click', 'view-all', 'quick-action'])
+const emit = defineEmits(['click', 'view-all', 'quick-action', 'fullscreen'])
 
 // 计算属性
 const typeText = computed(() => {
@@ -163,6 +173,10 @@ const handleViewAll = () => {
 
 const handleQuickAction = () => {
   emit('quick-action', props.tasks)
+}
+
+const handleFullscreen = () => {
+  emit('fullscreen', props.tasks, props.type)
 }
 </script>
 

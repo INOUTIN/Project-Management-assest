@@ -4,7 +4,7 @@
     <div v-if="globalLoading" class="global-loading" v-loading="true">
       <div class="loading-content">
         <el-icon class="is-loading"><Loading /></el-icon>
-        <p>加载中...</p>
+        <p>正在加载项目管理工具...</p>
       </div>
     </div>
     
@@ -85,24 +85,64 @@ const handleKeyboardShortcuts = (event) => {
 }
 
 // 生命周期钩子
-onMounted(() => {
+onMounted(async () => {
   console.log('🎉 App component mounted')
   
-  // 监听路由变化
-  router.beforeEach(handleRouteChange)
-  
-  // 监听全局错误
-  window.addEventListener('error', handleGlobalError)
-  window.addEventListener('unhandledrejection', handleGlobalError)
-  
-  // 监听键盘事件
-  document.addEventListener('keydown', handleKeyboardShortcuts)
-  
-  // 暴露全局方法
-  window.setGlobalLoading = setGlobalLoading
-  
-  // 应用初始化完成事件
-  window.eventBus?.emit('app:ready')
+  try {
+    // 设置初始加载状态
+    globalLoading.value = true
+    
+    // 监听路由变化
+    router.beforeEach(handleRouteChange)
+    
+    // 监听全局错误
+    window.addEventListener('error', handleGlobalError)
+    window.addEventListener('unhandledrejection', handleGlobalError)
+    
+    // 监听键盘事件
+    document.addEventListener('keydown', handleKeyboardShortcuts)
+    
+    // 暴露全局方法
+    window.setGlobalLoading = setGlobalLoading
+    
+    // 初始化数据中心（使用更安全的方式）
+    console.log('🔄 Initializing data center...')
+    try {
+      const { getGlobalProjectDataCenter } = await import('@features/gantt-chart/composables/useProjectDataCenter.js')
+      const dataCenter = getGlobalProjectDataCenter()
+      
+      // 预加载数据
+      console.log('📊 Pre-loading project data...')
+      await dataCenter.loadAllProjects()
+      console.log('✅ Project data loaded successfully')
+    } catch (dataError) {
+      console.warn('⚠️ Data center initialization failed, but app will continue:', dataError)
+      // 应用仍然可以继续运行，只是没有预加载数据
+    }
+    
+    // 应用初始化完成事件
+    window.eventBus?.emit('app:ready')
+    
+  } catch (error) {
+    console.error('❌ App initialization failed:', error)
+    handleGlobalError(error)
+  } finally {
+    // 确保加载状态被清除
+    setTimeout(() => {
+      globalLoading.value = false
+      
+      // 移除HTML中的初始加载动画
+      const loadingElement = document.getElementById('loading')
+      if (loadingElement) {
+        loadingElement.classList.add('fade-out')
+        setTimeout(() => {
+          loadingElement.remove()
+        }, 300)
+      }
+      
+      console.log('✅ App initialization completed')
+    }, 500)
+  }
 })
 
 onUnmounted(() => {

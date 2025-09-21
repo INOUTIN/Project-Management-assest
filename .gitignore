@@ -31,3 +31,16 @@ pids/
 # Hosting platform caches (optional)
 .vercel/
 .netlify/
+
+# Development logs & change tracking
+CHANGELOG.local.md
+CHANGELOG.dev.md
+change-log.md
+changlog.md
+*.changelog
+.changes/
+dev-notes.md
+DEV_LOG_*.md
+dev-log-*.md
+development-log-*.md
+daily-log-*.md

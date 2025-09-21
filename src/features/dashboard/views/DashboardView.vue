@@ -155,12 +155,14 @@
             :tasks="reminders['7days']"
             type="urgent"
             @click="showReminderDetails('7days')"
+            @fullscreen="handleFullscreen"
           />
           <OverdueAlert
             title="14天内超期提醒"
             :tasks="reminders['14days']"
             type="normal"
             @click="showReminderDetails('14days')"
+            @fullscreen="handleFullscreen"
           />
         </div>
       </div>
@@ -310,6 +312,16 @@
         @update:refresh-interval="setRefreshInterval"
       />
     </el-dialog>
+
+    <!-- 全屏超期任务组件 -->
+    <OverdueTasksFullscreen
+      v-model="fullscreenVisible"
+      :title="fullscreenTitle"
+      :tasks="fullscreenTasks"
+      :type="fullscreenType"
+      @task-updated="handleFullscreenTaskUpdated"
+      @refresh="handleFullscreenRefresh"
+    />
   </div>
 </template>
 
@@ -335,6 +347,7 @@ import {
 import StatCard from '../components/StatCard.vue'
 import ProjectCard from '../components/ProjectCard.vue'
 import OverdueAlert from '../components/OverdueAlert.vue'
+import OverdueTasksFullscreen from '../components/OverdueTasksFullscreen.vue'
 import ReminderTaskList from '../components/ReminderTaskList.vue'
 import DashboardSettings from '../components/DashboardSettings.vue'
 
@@ -417,6 +430,12 @@ const reminderDialogVisible = ref(false)
 const reminderDialogTitle = ref('')
 const selectedReminderTasks = ref([])
 const showSettings = ref(false)
+
+// 全屏组件状态
+const fullscreenVisible = ref(false)
+const fullscreenTitle = ref('')
+const fullscreenTasks = ref([])
+const fullscreenType = ref('normal')
 
 // 计算属性
 const hasData = computed(() => projectsData.value.length > 0)
@@ -555,6 +574,34 @@ const handleBatchTaskUpdate = async (taskIds, updates) => {
   } catch (error) {
     ElMessage.error('批量更新失败: ' + error.message)
   }
+}
+
+// 全屏相关方法
+const handleFullscreen = (tasks, type) => {
+  const typeMap = {
+    'urgent': '7天内超期提醒',
+    'normal': '14天内超期提醒'
+  }
+  
+  fullscreenTitle.value = typeMap[type] || '超期任务'
+  fullscreenTasks.value = tasks
+  fullscreenType.value = type
+  fullscreenVisible.value = true
+}
+
+const handleFullscreenClose = () => {
+  fullscreenVisible.value = false
+  fullscreenTasks.value = []
+}
+
+const handleFullscreenTaskUpdated = async (task) => {
+  await handleTaskUpdated(task)
+  // 刷新数据以更新全屏视图
+  await handleRefresh()
+}
+
+const handleFullscreenRefresh = async () => {
+  await handleRefresh()
 }
 
 // 生命周期

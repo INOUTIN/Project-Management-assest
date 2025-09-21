@@ -71,20 +71,17 @@ if (import.meta.env.DEV) {
   console.log('📊 App Config:', appConfig)
 }
 
-// 数据迁移（如果需要）
-if (needsMigration()) {
-  console.log('🔄 Running data migration...')
-  runDataMigration().then(() => {
-    console.log('✅ Data migration completed')
-  }).catch(error => {
-    console.error('❌ Data migration failed:', error)
-  })
-}
-
-// 初始化模拟数据（仅在开发环境或启用模拟数据时）
-if (import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCK === 'true') {
-  initializeMockData()
-  console.log('📝 Mock data initialized')
+// 简化初始化逻辑，避免循环依赖
+try {
+  // 检查是否需要初始化基础数据
+  const hasProjects = localStorage.getItem('projects')
+  if (!hasProjects) {
+    // 初始化空的项目数据
+    localStorage.setItem('projects', JSON.stringify([]))
+    console.log('📝 Initialized empty projects data')
+  }
+} catch (error) {
+  console.warn('⚠️ Failed to initialize data:', error)
 }
 
 // 挂载应用
